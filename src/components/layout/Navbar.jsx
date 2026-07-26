@@ -1,14 +1,20 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-const links = [
+const userLinks = [
   { to: '/', label: 'Dashboard' },
   { to: '/projects', label: 'Projects' },
   { to: '/tasks', label: 'Tasks' },
 ];
 
+const adminLinks = [
+  { to: '/admin', label: 'Admin' },
+];
+
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
+
+  const links = isAuthenticated ? [...userLinks, ...(user?.role === 'admin' ? adminLinks : [])] : [];
 
   return (
     <nav className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
@@ -37,6 +43,9 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
+              {user?.role === 'admin' && (
+                <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Admin</span>
+              )}
               <span className="text-sm text-slate-500">{user.name}</span>
               <button onClick={logout} className="btn-secondary text-xs">Logout</button>
             </div>

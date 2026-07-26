@@ -4,6 +4,7 @@ import ProtectedRoute from '../components/common/ProtectedRoute.jsx';
 import Dashboard from '../pages/Dashboard.jsx';
 import Projects from '../pages/Projects.jsx';
 import Tasks from '../pages/Tasks.jsx';
+import AdminDashboard from '../pages/AdminDashboard.jsx';
 import Login from '../pages/Login.jsx';
 import Register from '../pages/Register.jsx';
 
@@ -19,6 +20,11 @@ export default function AppRoutes() {
               <Route index element={<Dashboard />} />
               <Route path="projects" element={<Projects />} />
               <Route path="tasks" element={<Tasks />} />
+              <Route path="admin" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
             </Routes>
           </Layout>
         </ProtectedRoute>
