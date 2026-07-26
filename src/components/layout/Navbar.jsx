@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useSocket } from '../../context/SocketContext.jsx';
 
 const userLinks = [
   { to: '/', label: 'Dashboard' },
@@ -13,6 +14,7 @@ const adminLinks = [
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { connected, notifications } = useSocket();
 
   const links = isAuthenticated ? [...userLinks, ...(user?.role === 'admin' ? adminLinks : [])] : [];
 
@@ -43,6 +45,15 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <span className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                {connected ? 'Live' : 'Offline'}
+              </div>
+              {notifications.length > 0 && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                  {notifications.length}
+                </span>
+              )}
               {user?.role === 'admin' && (
                 <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Admin</span>
               )}
