@@ -62,11 +62,12 @@ npm run preview  # preview production build
 ## 🗺️ Milestones
 
 - [x] **M1** — Dev environment + backend connectivity check
-- [ ] **M3** — Responsive UI + dynamic data
-- [ ] **M4** — React components, hooks, reusable UI, loading states
-- [ ] **M5** — Auth pages + protected routes
+- [x] **M3** — Responsive UI + dynamic data
+- [x] **M4** — React components, hooks, reusable UI, loading states
+- [ ] **M5** — Auth pages + protected routes (JWT)
 - [ ] **M7** — Role-based dashboards
 - [ ] **M8** — Real-time UI (Socket.io)
+- [ ] **M9** — GraphQL
 
 ## 📄 License
 
