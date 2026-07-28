@@ -1,71 +1,118 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api/axios.js';
 
 const AuthContext = createContext(null);
 
-const TOKEN_KEY = 'taskflow_token';
-
-function getStoredToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function storeToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const accessTokenRef = useRef(null);
+  const isRefreshingRef = useRef(false);
+  const refreshSubscribers = useRef([]);
 
   const setAuthHeader = (token) => {
+    accessTokenRef.current = token;
     if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     else delete api.defaults.headers.common['Authorization'];
   };
 
+  const onTokenRefreshed = (token) => {
+    refreshSubscribers.current.forEach((cb) => cb(token));
+    refreshSubscribers.current = [];
+  };
+
+  const addRefreshSubscriber = (cb) => {
+    refreshSubscribers.current.push(cb);
+  };
+
+  const refreshAccessToken = useCallback(async () => {
+    if (isRefreshingRef.current) {
+      return new Promise((resolve) => addRefreshSubscriber(resolve));
+    }
+    isRefreshingRef.current = true;
+    try {
+      const res = await api.post('/v1/auth/refresh');
+      const { accessToken } = res.data.data;
+      setAuthHeader(accessToken);
+      onTokenRefreshed(accessToken);
+      return accessToken;
+    } catch (err) {
+      setAuthHeader(null);
+      setUser(null);
+      throw err;
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, []);
+
   const loadUser = useCallback(async () => {
-    const token = getStoredToken();
+    const token = accessTokenRef.current;
     if (!token) { setLoading(false); return; }
     setAuthHeader(token);
     try {
       const res = await api.get('/v1/auth/me');
       setUser(res.data.data);
     } catch {
-      storeToken(null);
-      setAuthHeader(null);
+      try {
+        await refreshAccessToken();
+        const res = await api.get('/v1/auth/me');
+        setUser(res.data.data);
+      } catch {
+        setAuthHeader(null);
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshAccessToken]);
 
   useEffect(() => { loadUser(); }, [loadUser]);
 
+  api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          const token = await refreshAccessToken();
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        } catch (refreshErr) {
+          return Promise.reject(refreshErr);
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+
   const login = async (email, password) => {
     const res = await api.post('/v1/auth/login', { email, password });
-    const { user: userData, token } = res.data.data;
-    storeToken(token);
-    setAuthHeader(token);
+    const { user: userData, accessToken } = res.data.data;
+    setAuthHeader(accessToken);
     setUser(userData);
     return userData;
   };
 
   const register = async (name, email, password) => {
     const res = await api.post('/v1/auth/register', { name, email, password });
-    const { user: userData, token } = res.data.data;
-    storeToken(token);
-    setAuthHeader(token);
+    const { user: userData, accessToken } = res.data.data;
+    setAuthHeader(accessToken);
     setUser(userData);
     return userData;
   };
 
-  const logout = () => {
-    storeToken(null);
-    setAuthHeader(null);
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.post('/v1/auth/logout');
+    } finally {
+      setAuthHeader(null);
+      setUser(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user, getAccessToken: () => accessTokenRef.current }}>
       {children}
     </AuthContext.Provider>
   );

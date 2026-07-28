@@ -3,14 +3,13 @@ import axios from 'axios';
 /**
  * Central Axios instance.
  * - baseURL points to the API. In dev, Vite proxies /api to the backend.
- * - A response interceptor normalizes errors so components can rely on
- *   a consistent error message shape.
- * (Auth token injection is added in the Authentication milestone.)
+ * - withCredentials: true enables cookie support for HttpOnly cookies
  */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
+  withCredentials: true,
 });
 
 api.interceptors.response.use(

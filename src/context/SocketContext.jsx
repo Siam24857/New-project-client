@@ -7,7 +7,7 @@ const SocketContext = createContext(null);
 const SOCKET_URL = 'http://localhost:5000';
 
 export function SocketProvider({ children }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, getAccessToken } = useAuth();
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -22,7 +22,7 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    const token = localStorage.getItem('taskflow_token');
+    const token = getAccessToken();
     const socket = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
