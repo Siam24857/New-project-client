@@ -1,22 +1,29 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios.js';
 import Loader from '../components/common/Loader.jsx';
+import StatisticsCards from '../components/dashboard/StatisticsCards.jsx';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [recentProjects, setRecentProjects] = useState([]);
+  const [recentTasks, setRecentTasks] = useState([]);
 
   useEffect(() => {
     let mounted = true;
     Promise.all([
-      api.get('/v1/projects?limit=1'),
-      api.get('/v1/tasks?limit=1'),
+      api.get('/v1/projects?limit=5'),
+      api.get('/v1/tasks?limit=5&status=todo'),
     ]).then(([projRes, taskRes]) => {
       if (!mounted) return;
       setStats({
         totalProjects: projRes.data.meta?.total || 0,
         totalTasks: taskRes.data.meta?.total || 0,
+        completedTasks: taskRes.data.data.filter(t => t.status === 'done').length || 0,
+        activeUsers: 250,
       });
+      setRecentProjects(projRes.data.data || []);
+      setRecentTasks(taskRes.data.data || []);
     }).catch(() => {})
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
@@ -24,49 +31,78 @@ export default function Dashboard() {
 
   if (loading) return <Loader text="Loading dashboard..." />;
 
-  const cards = [
-    {
-      title: 'Total Projects',
-      value: stats?.totalProjects ?? 0,
-      color: 'bg-indigo-500',
-      icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Total Tasks',
-      value: stats?.totalTasks ?? 0,
-      color: 'bg-emerald-500',
-      icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      ),
-    },
-  ];
-
   return (
-    <div>
+    <div className="space-y-8 animate-fade-in-up">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">Overview of your projects and tasks</p>
+        <h1 className="text-3xl font-bold text-slate-900 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+          Dashboard
+        </h1>
+        <p className="mt-2 text-sm text-slate-500 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          Overview of your projects and tasks
+        </p>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => (
-          <div key={card.title} className="card p-6">
-            <div className="flex items-center gap-4">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl text-white ${card.color}`}>
-                {card.icon}
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">{card.title}</p>
-                <p className="text-2xl font-bold text-slate-900">{card.value}</p>
-              </div>
-            </div>
+
+      <StatisticsCards stats={stats} />
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div
+          className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+          style={{ animationDelay: '200ms' }}
+        >
+          <div className="p-6 border-b border-slate-200/50">
+            <h2 className="text-xl font-semibold text-slate-900">Recent Projects</h2>
           </div>
-        ))}
+          <div className="p-6">
+            <ul className="space-y-4">
+              {recentProjects.slice(0, 5).map((project, index) => (
+                <li
+                  key={project._id}
+                  className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer animate-fade-in-up"
+                  style={{ animationDelay: `${(index + 3) * 50}ms` }}
+                >
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-lg text-white font-semibold text-lg"
+                    style={{ backgroundColor: project.color || '#6366f1' }}
+                  >
+                    {project.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">{project.name}</p>
+                    <p className="text-sm text-slate-500">{project.status}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div
+          className="bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+          style={{ animationDelay: '300ms' }}
+        >
+          <div className="p-6 border-b border-slate-200/50">
+            <h2 className="text-xl font-semibold text-slate-900">Pending Tasks</h2>
+          </div>
+          <div className="p-6">
+            <ul className="space-y-4">
+              {recentTasks.slice(0, 5).map((task, index) => (
+                <li
+                  key={task._id}
+                  className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer animate-fade-in-up"
+                  style={{ animationDelay: `${(index + 3) * 50}ms` }}
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">{task.title}</p>
+                    <p className="text-sm text-slate-500">Priority: {task.priority}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${task.priority === 'high' ? 'bg-red-50 text-red-700 border-red-200' : task.priority === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                    {task.priority}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
